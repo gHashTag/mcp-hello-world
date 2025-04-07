@@ -3,3 +3,8 @@ export interface TestResult {
   passed: boolean;
   errors: string[];
 } 
+
+export interface Context {
+  message: string;
+  reply: (message: string) => Promise<void>;
+}

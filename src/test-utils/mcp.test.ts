@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
-import { createMcpService } from '../bot/services/mcp.js';
-import { TestResult } from './types.js';
+import { createMcpService } from '@services/mcp';
+import { TestResult } from './types';
 
 // Добавляем WebSocket в глобальную область видимости
 (global as any).WebSocket = WebSocket;

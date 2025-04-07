@@ -1,5 +1,5 @@
-import { Handler, Context } from '../types.js';
-import { createMcpService } from '../services/mcp.js';
+import { Handler, Context } from '../types';
+import { createMcpService } from '../services/mcp';
 
 export const developmentHandler: Handler = async (ctx: Context) => {
   const service = createMcpService();

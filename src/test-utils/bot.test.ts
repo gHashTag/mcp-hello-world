@@ -1,6 +1,6 @@
 import readline from 'readline';
-import { developmentHandler } from '../bot/handlers/development.js';
-import { Context } from '../bot/types.js';
+import { developmentHandler } from '@handlers/development';
+import { Context } from './types';
 import { WebSocket } from 'ws';
 
 // Добавляем WebSocket в глобальную область видимости

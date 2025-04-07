@@ -1,5 +1,4 @@
-import { MCPClient } from '@modelcontextprotocol/sdk';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { Client } from '@modelcontextprotocol/sdk/client';
 
 export interface BotConfig {
   token: string;
@@ -34,6 +33,7 @@ export interface Service {
 
 export interface Context {
   message: string;
+  reply(text: string): Promise<void>;
 }
 
 export type Handler = (ctx: Context) => Promise<any>; 

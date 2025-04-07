@@ -1,1 +1,1 @@
-export * from './mcp.js'; 
+export * from './mcp'; 

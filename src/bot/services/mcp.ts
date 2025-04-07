@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { WebSocketClientTransport } from '@modelcontextprotocol/sdk/client/websocket.js';
-import { Service } from '../types.js';
+import type { Service } from '../types';
 
 interface McpConfig {
   serverUrl: string;

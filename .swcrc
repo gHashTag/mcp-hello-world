@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/swcrc",
+  "jsc": {
+    "parser": {
+      "syntax": "typescript",
+      "tsx": false,
+      "decorators": true,
+      "dynamicImport": true
+    },
+    "target": "es2022",
+    "baseUrl": "./src",
+    "paths": {
+      "@bot/*": ["bot/*"],
+      "@services/*": ["bot/services/*"],
+      "@handlers/*": ["bot/handlers/*"],
+      "@types/*": ["bot/types/*"],
+      "@test-utils/*": ["test-utils/*"]
+    }
+  },
+  "module": {
+    "type": "es6"
+  },
+  "sourceMaps": true,
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+} 
