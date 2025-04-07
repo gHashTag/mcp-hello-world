@@ -1,6 +1,6 @@
-import { MCPService } from './bot/services/mcp';
-import { Task, TaskType } from './bot/types';
-import { handleTask } from './bot/handlers';
+import { MCPService } from './bot/services/mcp.js';
+import { Task, TaskType } from './bot/types.js';
+import { handleTask } from './bot/handlers/index.js';
 
 async function main() {
   const mcpService = new MCPService(

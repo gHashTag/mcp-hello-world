@@ -1,50 +1,76 @@
-import { MCPClient } from '@modelcontextprotocol/sdk';
-import { Service } from '../types';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { WebSocketClientTransport } from '@modelcontextprotocol/sdk/client/websocket.js';
+import { Service } from '../types.js';
 
 export class MCPService implements Service {
-  private client: MCPClient;
+  private client: Client;
 
-  constructor(serverUrl: string, apiKey: string) {
-    this.client = new MCPClient({
-      serverUrl,
-      apiKey
+  constructor() {
+    console.log('🚀 Initializing MCP service...');
+    this.client = new Client({
+      name: 'NeuroBlogger',
+      version: '1.0.0'
     });
   }
 
-  async initialize(): Promise<void> {
-    console.log('🚀 Инициализация MCP сервиса...');
+  async initialize() {
+    const serverUrl = process.env.MCP_SERVER_URL;
+    const apiKey = process.env.MCP_API_KEY;
+
+    if (!serverUrl || !apiKey) {
+      throw new Error('🚫 MCP server URL or API key not set');
+    }
+
     try {
-      await this.client.connect();
-      console.log('✅ MCP сервис успешно инициализирован');
+      console.log('🚀 Connecting to MCP server...');
+      
+      const url = new URL(serverUrl);
+      url.searchParams.set('token', apiKey);
+      
+      const transport = new WebSocketClientTransport(url);
+      await this.client.connect(transport);
+
+      console.log('✅ Connected to MCP server');
     } catch (error) {
-      console.error('❌ Ошибка при инициализации MCP сервиса:', error);
+      console.error('❌ Failed to connect to MCP server:', error);
       throw error;
     }
   }
 
-  async close(): Promise<void> {
-    console.log('🔄 Закрытие соединения с MCP сервисом...');
+  async close() {
     try {
-      await this.client.disconnect();
-      console.log('✅ Соединение с MCP сервисом закрыто');
+      await this.client.close();
+      console.log('✅ Closed MCP connection');
     } catch (error) {
-      console.error('❌ Ошибка при закрытии соединения с MCP сервисом:', error);
+      console.error('❌ Failed to close MCP connection:', error);
       throw error;
     }
   }
 
-  async processTask(task: any): Promise<void> {
-    console.log('🚀 Обработка задачи через MCP:', task);
+  async processTask(prompt: string) {
     try {
-      await this.client.sendMessage(task);
-      console.log('✅ Задача успешно обработана');
+      console.log('🎯 Processing task with prompt:', prompt);
+      
+      const result = await this.client.complete({
+        ref: {
+          type: 'ref/prompt',
+          name: 'default'
+        },
+        argument: {
+          name: 'prompt',
+          value: prompt
+        }
+      });
+
+      console.log('✅ Task processed successfully');
+      return result;
     } catch (error) {
-      console.error('❌ Ошибка при обработке задачи:', error);
+      console.error('❌ Failed to process task:', error);
       throw error;
     }
   }
 
-  getClient(): MCPClient {
+  getClient() {
     return this.client;
   }
 } 
