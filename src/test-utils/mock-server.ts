@@ -22,7 +22,10 @@ import { createServer } from 'http';
 
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ 
+  noServer: true,
+  path: '/'
+});
 
 // Эндпоинт для проверки здоровья
 app.get('/health', (req, res) => {
@@ -91,7 +94,14 @@ wss.on('connection', (ws) => {
   });
 });
 
-const PORT = process.env.PORT || 8080;
+// Обработка WebSocket upgrade запросов
+server.on('upgrade', (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
+});
+
+const PORT = process.env.PORT || 8888;
 server.listen(PORT, () => {
   console.log(`🚀 Мок-сервер запущен на порту ${PORT}`);
 }); 
