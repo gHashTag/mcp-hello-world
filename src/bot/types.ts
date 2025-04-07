@@ -30,4 +30,10 @@ export interface Service {
   close(): Promise<void>;
   processTask(prompt: string): Promise<any>;
   getClient(): Client;
-} 
+}
+
+export interface Context {
+  message: string;
+}
+
+export type Handler = (ctx: Context) => Promise<any>; 

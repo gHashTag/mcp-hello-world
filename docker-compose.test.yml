@@ -1,26 +1,27 @@
-version: '3.8'
+version: '3'
 
 services:
+  mock-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mock-server
+    ports:
+      - "8080:8080"
+    networks:
+      - test-network
+
   test:
     build:
       context: .
       dockerfile: Dockerfile.test
-    environment:
-      - NODE_ENV=test
-      - MCP_SERVER_URL=ws://mcp-test:3000
-      - MCP_API_KEY=test-api-key
     depends_on:
-      - mcp-test
-
-  mcp-test:
-    image: modelcontextprotocol/mcp-server:latest
+      - mock-server
+    networks:
+      - test-network
     environment:
-      - PORT=3000
-      - API_KEY=test-api-key
-    ports:
-      - "3000:3000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3 
+      - MCP_SERVER_URL=ws://mock-server:8080
+      - MCP_API_KEY=test-api-key
+
+networks:
+  test-network:
+    driver: bridge 

@@ -5,12 +5,16 @@ WORKDIR /app
 # Установка зависимостей для тестирования
 COPY package*.json ./
 RUN npm install
+RUN npm install ws @types/ws
 
 # Копирование исходного кода
 COPY . .
 
 # Компиляция TypeScript
 RUN npm run build
+
+# Добавляем глобальный WebSocket
+ENV NODE_OPTIONS="--experimental-global-webcrypto"
 
 # Запуск тестов
 CMD ["npm", "run", "test"] 

@@ -15,10 +15,10 @@
     "start:client": "node dist/client.js",
     "dev:server": "node --loader ts-node/esm src/server.ts",
     "dev:client": "node --loader ts-node/esm src/client.ts",
-    "test": "node --loader ts-node/esm test-utils/hello-test.ts",
+    "test": "node --loader ts-node/esm src/test-utils/index.ts",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up",
-    "docker:test": "docker-compose run --rm mcp-client npm run test",
+    "docker:test": "docker-compose -f docker-compose.test.yml run test",
     "dev": "tsc -w"
   },
   "keywords": [],
@@ -29,8 +29,10 @@
     "@modelcontextprotocol/sdk": "^1.8.0",
     "@types/express": "^4.17.21",
     "@types/node": "^20.11.24",
+    "@types/ws": "^8.5.10",
     "express": "^4.18.2",
     "typescript": "^5.3.3",
+    "ws": "^8.16.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

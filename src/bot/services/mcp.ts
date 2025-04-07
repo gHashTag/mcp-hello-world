@@ -2,6 +2,11 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { WebSocketClientTransport } from '@modelcontextprotocol/sdk/client/websocket.js';
 import { Service } from '../types.js';
 
+interface McpConfig {
+  serverUrl: string;
+  apiKey: string;
+}
+
 // Создаем клиента MCP
 const createMcpClient = () => {
   console.log('🚀 Initializing MCP service...');
@@ -12,9 +17,8 @@ const createMcpClient = () => {
 };
 
 // Инициализация соединения с сервером
-const initializeConnection = async (client: Client): Promise<void> => {
-  const serverUrl = process.env.MCP_SERVER_URL;
-  const apiKey = process.env.MCP_API_KEY;
+const initializeConnection = async (client: Client, config: McpConfig): Promise<void> => {
+  const { serverUrl, apiKey } = config;
 
   if (!serverUrl || !apiKey) {
     throw new Error('🚫 MCP server URL or API key not set');
@@ -72,11 +76,14 @@ const processTask = async (client: Client, prompt: string) => {
 };
 
 // Создание сервиса MCP
-export const createMcpService = (): Service => {
+export const createMcpService = (config: McpConfig = {
+  serverUrl: process.env.MCP_SERVER_URL || '',
+  apiKey: process.env.MCP_API_KEY || ''
+}): Service => {
   const client = createMcpClient();
   
   return {
-    initialize: () => initializeConnection(client),
+    initialize: () => initializeConnection(client, config),
     close: () => closeConnection(client),
     processTask: (prompt: string) => processTask(client, prompt),
     getClient: () => client

@@ -1,36 +1,18 @@
-import { MCPService } from './bot/services/mcp.js';
-import { Task, TaskType } from './bot/types.js';
-import { handleTask } from './bot/handlers/index.js';
+import { createMcpService } from './bot/services/mcp.js';
 
 async function main() {
-  const mcpService = new MCPService(
-    process.env.MCP_SERVER_URL || 'http://localhost:8080',
-    process.env.MCP_API_KEY || ''
-  );
+  const service = createMcpService();
+  await service.initialize();
 
   try {
-    console.log('🚀 Запуск приложения...');
-    await mcpService.initialize();
-
-    // Пример задачи для тестирования
-    const task: Task = {
-      id: '1',
-      type: TaskType.DEVELOPMENT,
-      description: 'Тестовая задача разработки',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    await handleTask(task, mcpService);
-  } catch (error) {
-    console.error('❌ Ошибка в приложении:', error);
-    process.exit(1);
+    const result = await service.processTask('Hello, MCP!');
+    console.log('🎯 Результат:', result);
   } finally {
-    await mcpService.close();
+    await service.close();
   }
 }
 
 main().catch(error => {
-  console.error('❌ Необработанная ошибка:', error);
+  console.error('❌ Ошибка:', error);
   process.exit(1);
 }); 

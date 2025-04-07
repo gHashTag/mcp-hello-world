@@ -1,30 +1,14 @@
-import { Task, TaskType } from '../types';
-import { MCPService } from '../services/mcp';
+import { Handler, Context } from '../types.js';
+import { createMcpService } from '../services/mcp.js';
 
-export async function handleDevelopmentTask(task: Task, mcpService: MCPService): Promise<void> {
-  if (task.type !== TaskType.DEVELOPMENT) {
-    throw new Error('Неверный тип задачи');
-  }
-
-  console.log('🚀 Обработка задачи разработки:', {
-    id: task.id,
-    description: task.description,
-    metadata: task.metadata
-  });
-
+export const developmentHandler: Handler = async (ctx: Context) => {
+  const service = createMcpService();
+  await service.initialize();
+  
   try {
-    await mcpService.processTask({
-      type: 'development',
-      task: {
-        id: task.id,
-        description: task.description,
-        metadata: task.metadata
-      }
-    });
-
-    console.log('✅ Задача разработки успешно обработана');
-  } catch (error) {
-    console.error('❌ Ошибка при обработке задачи разработки:', error);
-    throw error;
+    const result = await service.processTask(ctx.message);
+    return result;
+  } finally {
+    await service.close();
   }
-} 
+}; 
