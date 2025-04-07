@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Установка зависимостей для тестирования
+COPY package*.json ./
+RUN npm install
+
+# Копирование исходного кода
+COPY . .
+
+# Компиляция TypeScript
+RUN npm run build
+
+# Запуск тестов
+CMD ["npm", "run", "test"] 

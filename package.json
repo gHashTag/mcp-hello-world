@@ -18,7 +18,8 @@
     "test": "node --loader ts-node/esm test-utils/hello-test.ts",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up",
-    "docker:test": "docker-compose run --rm mcp-client npm run test"
+    "docker:test": "docker-compose run --rm mcp-client npm run test",
+    "dev": "tsc -w"
   },
   "keywords": [],
   "author": "",
