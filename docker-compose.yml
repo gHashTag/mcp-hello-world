@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./src:/app/src
+      - ./test-utils:/app/test-utils
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+    command: npm run dev:server
+    environment:
+      - NODE_ENV=development
+    networks:
+      - mcp-network
+
+  mcp-client:
+    build: .
+    depends_on:
+      - mcp-server
+    volumes:
+      - ./src:/app/src
+      - ./test-utils:/app/test-utils
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+    environment:
+      - NODE_ENV=development
+      - MCP_SERVER_HOST=mcp-server
+      - MCP_SERVER_PORT=3001
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge 
