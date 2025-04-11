@@ -5,14 +5,10 @@
 
 import { Telegraf, Context } from 'telegraf';
 import { createAgent, AgentConfig } from '../agent/index.js';
-import { TaskType } from '../agent/state.js';
+import { TaskType, TaskStatus } from '../agent/state.js';
 import { config } from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import WebSocket from 'ws';
-
-// Добавляем WebSocket в глобальную область видимости для MCP SDK
-(global as any).WebSocket = WebSocket;
 
 // Загружаем переменные окружения
 const __filename = fileURLToPath(import.meta.url);
@@ -95,7 +91,10 @@ const setupHandlers = (bot: Telegraf<Context>, state: BotState): void => {
       '🧪 /test - Генерация тестов\n' +
       '📝 /docs - Создание документации\n' +
       '📦 /deps - Управление зависимостями\n' +
-      '🔧 /git - Операции с Git\n\n' +
+      '🔧 /git - Операции с Git\n' +
+      '🧠 /improve - Запрос на улучшение\n' +
+      '🔄 /background - Запустить фоновое улучшение\n' +
+      '📋 /check_tasks - Проверить статус фоновых задач\n\n' +
       'Также вы можете просто отправить мне сообщение с описанием задачи!'
     );
   });
@@ -116,7 +115,10 @@ const setupHandlers = (bot: Telegraf<Context>, state: BotState): void => {
       '   🧪 /test - Генерация тестов\n' +
       '   📝 /docs - Создание документации\n' +
       '   📦 /deps - Управление зависимостями\n' +
-      '   🔧 /git - Операции с Git\n\n' +
+      '   🔧 /git - Операции с Git\n' +
+      '   🧠 /improve - Запрос на улучшение\n' +
+      '   🔄 /background - Запустить фоновое улучшение\n' +
+      '   📋 /check_tasks - Проверить статус фоновых задач\n' +
       '2. После выбора команды, отправьте сообщение с деталями задачи\n' +
       '3. Дождитесь выполнения задачи и получения результата\n\n' +
       '🤔 Если у вас есть вопросы или предложения, пожалуйста, сообщите об этом.'
@@ -160,6 +162,82 @@ const setupHandlers = (bot: Telegraf<Context>, state: BotState): void => {
     await ctx.reply('🔄 Отправьте код для рефакторинга и опишите, что нужно изменить:');
   });
   
+  // Обработка команды /improve (самосовершенствование)
+  bot.command('improve', async (ctx) => {
+    if (!isAllowedUser(ctx, state)) {
+      return ctx.reply('⛔ У вас нет доступа к этому боту.');
+    }
+    
+    await ctx.reply('🧠 Опишите, чему мне нужно научиться или что улучшить в моей работе:');
+  });
+  
+  // Обработка команды /background (фоновое улучшение)
+  bot.command('background', async (ctx) => {
+    if (!isAllowedUser(ctx, state)) {
+      return ctx.reply('⛔ У вас нет доступа к этому боту.');
+    }
+    
+    await ctx.reply('🔄 Опишите задачу фонового улучшения:');
+  });
+  
+  // Обработка команды /check_tasks (проверка статуса фоновых задач)
+  bot.command('check_tasks', async (ctx) => {
+    if (!isAllowedUser(ctx, state)) {
+      return ctx.reply('⛔ У вас нет доступа к этому боту.');
+    }
+    
+    if (!state.initialized) {
+      return ctx.reply('⚠️ Агент не инициализирован. Сначала запустите его, отправив какое-либо сообщение.');
+    }
+    
+    try {
+      // Получаем все фоновые задачи
+      const allTasks = state.agent.getAllTasks();
+      const backgroundTasks = allTasks.filter(task => 
+        task.type === TaskType.BACKGROUND_IMPROVEMENT
+      );
+      
+      if (backgroundTasks.length === 0) {
+        await ctx.reply('📊 Нет активных фоновых задач.');
+        return;
+      }
+      
+      let statusMessage = '📊 Статус фоновых задач:\n\n';
+      
+      for (const task of backgroundTasks) {
+        statusMessage += `ID: ${task.id}\n`;
+        statusMessage += `Статус: ${task.status}\n`;
+        statusMessage += `Создана: ${task.created.toLocaleString()}\n`;
+        statusMessage += `Задача: ${task.description.substring(0, 50)}${task.description.length > 50 ? '...' : ''}\n`;
+        
+        if (task.status === TaskStatus.COMPLETED && task.result) {
+          const createdFiles = task.result.createdFiles || [];
+          if (createdFiles.length > 0) {
+            statusMessage += `\nСозданные файлы:\n`;
+            createdFiles.forEach((file: string) => {
+              statusMessage += `- ${file}\n`;
+            });
+          }
+          
+          const updatedFiles = task.result.updatedFiles || [];
+          if (updatedFiles.length > 0) {
+            statusMessage += `\nОбновленные файлы:\n`;
+            updatedFiles.forEach((file: string) => {
+              statusMessage += `- ${file}\n`;
+            });
+          }
+        }
+        
+        statusMessage += '\n-----------------\n\n';
+      }
+      
+      await ctx.reply(statusMessage);
+    } catch (error) {
+      console.error('Error checking tasks:', error);
+      await ctx.reply(`❌ Ошибка при проверке задач: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    }
+  });
+  
   // Обработка обычных текстовых сообщений
   bot.on('text', async (ctx) => {
     if (!isAllowedUser(ctx, state)) {
@@ -178,14 +256,71 @@ const setupHandlers = (bot: Telegraf<Context>, state: BotState): void => {
         // Отправляем сообщение о начале обработки
         const statusMessage = await ctx.reply('🤔 Обрабатываю ваш запрос...');
         
+        // Ключевые слова для распознавания различных типов запросов
+        const selfImprovementKeywords = [
+          'научись', 'улучши себя', 'стань лучше', 'совершенствуйся', 
+          'развивайся', 'обучись', 'изучи', 'добавь функцию',
+          'обнови', 'оптимизируй', 'улучши свой код'
+        ];
+        
+        const backgroundKeywords = [
+          'фоновый', 'фоном', 'заднем плане', 'фоновом',
+          'фоновое', 'автоматическое улучшение'
+        ];
+        
+        const isSelfImprovement = selfImprovementKeywords.some(keyword => 
+          text.toLowerCase().includes(keyword.toLowerCase())
+        );
+        
+        const isBackground = backgroundKeywords.some(keyword => 
+          text.toLowerCase().includes(keyword.toLowerCase())
+        );
+        
         // Определяем тип задачи (для демонстрации используем CODE_GENERATION)
-        const taskType = TaskType.CODE_GENERATION;
+        let taskType = TaskType.CODE_GENERATION;
         
         // Инициализируем агента при необходимости
         if (!state.initialized) {
           await ctx.reply('🚀 Инициализация агента...');
           await state.agent.initialize();
           state.initialized = true;
+        }
+        
+        if (isBackground) {
+          try {
+            await ctx.reply('🔄 Понял, вы хотите запустить фоновую задачу улучшения. Начинаю работу...');
+            
+            if (!state.initialized) {
+              await ctx.reply('🚀 Инициализация агента...');
+              await state.agent.initialize();
+              state.initialized = true;
+            }
+            
+            const backgroundTask = await state.agent.startBackgroundImprovement(
+              text,
+              ctx.from.id.toString()
+            );
+            
+            await ctx.reply(
+              `🔄 Запущена фоновая задача самосовершенствования (ID: ${backgroundTask.taskId})\n\n` +
+              `Я буду работать над этим в фоновом режиме и сообщу о результатах. ` +
+              `Вы можете проверить статус, используя команду /check_tasks.`
+            );
+            
+            // Добавляем задачу в состояние бота для отслеживания
+            state.tasks.set(backgroundTask.taskId, {
+              userId: ctx.from.id,
+              messageId: ctx.message.message_id
+            });
+          } catch (error) {
+            console.error('Error starting background improvement:', error);
+            await ctx.reply(`❌ Ошибка при запуске фонового самосовершенствования: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+          }
+          return;
+        } else if (isSelfImprovement) {
+          // Если это запрос на самосовершенствование, но не фоновый, обрабатываем как обычную задачу
+          await ctx.reply('🧠 Понял, вы хотите, чтобы я улучшил свои возможности. Работаю над этим...');
+          taskType = TaskType.SELF_IMPROVEMENT;
         }
         
         // Добавляем задачу
@@ -236,6 +371,102 @@ const setupHandlers = (bot: Telegraf<Context>, state: BotState): void => {
     console.error(`Error for ${ctx.updateType}:`, err);
     ctx.reply('❌ Ой! Произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте позже.');
   });
+
+  // Функция для периодической проверки завершенных задач
+  const checkCompletedTasks = async () => {
+    if (!state.initialized) {
+      return;
+    }
+    
+    try {
+      // Получаем все фоновые задачи
+      const allTasks = state.agent.getAllTasks();
+      const backgroundTasks = allTasks.filter(task => 
+        task.type === TaskType.BACKGROUND_IMPROVEMENT &&
+        task.status === TaskStatus.COMPLETED &&
+        !task.metadata.notificationSent // Флаг для отслеживания отправленных уведомлений
+      );
+      
+      for (const task of backgroundTasks) {
+        // Получаем информацию о задаче из состояния бота
+        const taskInfo = state.tasks.get(task.id);
+        
+        if (taskInfo && taskInfo.userId) {
+          try {
+            // Отправляем уведомление пользователю
+            await bot.telegram.sendMessage(
+              taskInfo.userId,
+              `✅ Фоновая задача завершена!\n\n` +
+              `Задача: ${task.description}\n\n` +
+              `Результаты:\n${JSON.stringify(task.result, null, 2)}`
+            );
+            
+            // Отправляем уведомление администраторам, если это не сам администратор
+            const adminUsers = process.env.ADMIN_USERS
+              ? process.env.ADMIN_USERS.split(',').map(id => Number(id))
+              : [];
+            
+            if (
+              process.env.ADMIN_NOTIFICATION_ENABLED === 'true' && 
+              adminUsers.length > 0 &&
+              !adminUsers.includes(taskInfo.userId)
+            ) {
+              for (const adminId of adminUsers) {
+                await bot.telegram.sendMessage(
+                  adminId,
+                  `🔔 Уведомление администратора:\n\n` +
+                  `Пользователь ID: ${taskInfo.userId}\n` +
+                  `Завершена фоновая задача: ${task.description}\n\n` +
+                  `Результаты:\n${JSON.stringify(task.result, null, 2)}`
+                );
+              }
+            }
+            
+            // Помечаем задачу как уведомленную
+            task.metadata.notificationSent = true;
+          } catch (error) {
+            console.error(`Error sending notification for task ${task.id}:`, error);
+          }
+        }
+      }
+      
+      // Очистка старых завершенных задач (старше 24 часов)
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      
+      const oldTasks = allTasks.filter(task => 
+        task.status === TaskStatus.COMPLETED &&
+        task.updated < oneDayAgo
+      );
+      
+      for (const task of oldTasks) {
+        // Удаляем информацию о задаче из состояния бота
+        state.tasks.delete(task.id);
+        console.log(`Cleaned up old task: ${task.id}`);
+      }
+    } catch (error) {
+      console.error('Error checking completed tasks:', error);
+    }
+  };
+  
+  // Запускаем периодическую проверку каждые 30 секунд
+  const taskCheckInterval = setInterval(checkCompletedTasks, 30000);
+  
+  // Останавливаем интервал при остановке бота
+  bot.telegram.getMe().then(() => {
+    console.log('Task completion check started');
+    
+    // Очищаем интервал при выключении бота
+    process.once('SIGINT', () => {
+      clearInterval(taskCheckInterval);
+      console.log('Task completion check stopped');
+    });
+    
+    process.once('SIGTERM', () => {
+      clearInterval(taskCheckInterval);
+      console.log('Task completion check stopped');
+    });
+  });
 };
 
 /**
@@ -253,6 +484,24 @@ const startBot = async (token: string): Promise<void> => {
     await state.agent.initialize();
     state.initialized = true;
     console.log('✅ Агент успешно инициализирован');
+    
+    // Устанавливаем команды бота для отображения в меню
+    await bot.telegram.setMyCommands([
+      { command: 'start', description: 'Начать диалог' },
+      { command: 'help', description: 'Получить помощь' },
+      { command: 'analyze', description: 'Анализ кода' },
+      { command: 'generate', description: 'Генерация кода' },
+      { command: 'refactor', description: 'Рефакторинг кода' },
+      { command: 'test', description: 'Генерация тестов' },
+      { command: 'docs', description: 'Создание документации' },
+      { command: 'deps', description: 'Управление зависимостями' },
+      { command: 'git', description: 'Операции с Git' },
+      { command: 'improve', description: 'Запрос на улучшение' },
+      { command: 'background', description: 'Запустить фоновое улучшение' },
+      { command: 'check_tasks', description: 'Проверить статус фоновых задач' },
+      { command: 'status', description: 'Показать статус агента' }
+    ]);
+    console.log('✅ Команды бота установлены');
     
     // Запускаем бота
     await bot.launch();

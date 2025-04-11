@@ -14,11 +14,13 @@
  * - Поддерживает JSON-RPC 2.0 формат сообщений
  * - Включает эмодзи в логах для улучшения читаемости
  * - Обрабатывает ошибки при парсинге сообщений
+ * - Динамически находит свободный порт, если основной занят
  */
 
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
+import { createConnection } from 'net';
 
 const app = express();
 const server = createServer(app);
@@ -101,7 +103,61 @@ server.on('upgrade', (request, socket, head) => {
   });
 });
 
-const PORT = process.env.PORT || 8888;
-server.listen(PORT, () => {
-  console.log(`🚀 Мок-сервер запущен на порту ${PORT}`);
-}); 
+/**
+ * Функция для проверки доступности порта
+ * @param port Номер порта для проверки
+ * @returns Promise, который резолвится с true если порт свободен, иначе с false
+ */
+function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const tester = createConnection({ port, host: 'localhost' });
+    
+    tester.once('connect', () => {
+      tester.end();
+      resolve(false); // Порт занят
+    });
+    
+    tester.once('error', (err) => {
+      if ((err as any).code === 'ECONNREFUSED') {
+        resolve(true); // Порт свободен
+      } else {
+        resolve(false); // Другая ошибка
+      }
+    });
+  });
+}
+
+/**
+ * Функция для поиска свободного порта
+ * @param startPort Начальный порт для поиска
+ * @param maxAttempts Максимальное количество попыток
+ * @returns Promise с номером свободного порта
+ */
+async function findAvailablePort(startPort: number, maxAttempts: number = 10): Promise<number> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const port = startPort + attempt;
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  throw new Error(`Не удалось найти свободный порт после ${maxAttempts} попыток`);
+}
+
+// Запуск сервера на свободном порту
+const DEFAULT_PORT = parseInt(process.env.PORT || '8888', 10);
+
+findAvailablePort(DEFAULT_PORT)
+  .then(port => {
+    server.listen(port, () => {
+      console.log(`🚀 Мок-сервер запущен на порту ${port}`);
+      
+      // Экспортируем порт для использования в других модулях
+      if (typeof process !== 'undefined' && process.env) {
+        process.env.MOCK_SERVER_PORT = port.toString();
+      }
+    });
+  })
+  .catch(err => {
+    console.error('❌ Не удалось запустить сервер:', err);
+    process.exit(1);
+  }); 
